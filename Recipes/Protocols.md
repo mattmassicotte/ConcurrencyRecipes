@@ -4,11 +4,11 @@ Protocols are widely used in Swift APIs, but can present unique challenges with 
 
 ## Non-isolated Protocol
 
-You have a non-isolatd protocol, but need to add conformance to an actor-isolated type.
+You have a non-isolated protocol, but need to add conformance to an actor-isolated type.
 
 ```swift
 protocol MyProtocol {
-    func doThing(arugment: ArgumentType) -> ResultType
+    func doThing(argument: ArgumentType) -> ResultType
 }
 
 @MainActor
@@ -16,16 +16,16 @@ class MyClass {
 }
 
 extension: MyClass: MyProtocol {
-    func doThing(arugment: ArgumentType) -> ResultType {
+    func doThing(argument: ArgumentType) -> ResultType {
     }
 }
 ```
 
-### Solution #1: nonisolated conformance
+### Solution #1: non-isolated conformance
 
 ```swift
 extension: MyClass: MyProtocol {
-    nonisolated func doThing(arugment: ArgumentType) -> ResultType {
+    nonisolated func doThing(argument: ArgumentType) -> ResultType {
         // at this point, you likely need to interact with self, so you must satisfy the compiler
         // hazard 1: Availability
         MainActor.assumeIsolated {

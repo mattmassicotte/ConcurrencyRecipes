@@ -39,7 +39,7 @@ Task {
 }
 ```
 
-### Soultion #2: the work must be synchronous
+### Solution #2: the work must be synchronous
 
 ```swift
 
