@@ -16,8 +16,8 @@ Quick definitions for the hazards referenced throughout the recipes:
 
 ## Table of Contents
 
-- [Creating an Async Context](AsyncContext.md)
-- [Using protocols from actor-isolated types](protocols.md)
+- [Creating an Async Context](Recipes/AsyncContext.md)
+- [Using protocols from actor-isolated types](Recipes/Protocols.md)
 
 ## Contributing and Collaboration
 
