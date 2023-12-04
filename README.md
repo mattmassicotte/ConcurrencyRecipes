@@ -18,6 +18,7 @@ Quick definitions for the hazards referenced throughout the recipes:
 
 - [Creating an Async Context](Recipes/AsyncContext.md)
 - [Using Protocols](Recipes/Protocols.md)
+- [Sendability](Recipes/Sendability.md)
 
 ## Contributing and Collaboration
 
