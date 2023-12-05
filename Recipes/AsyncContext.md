@@ -2,6 +2,36 @@
 
 Virtually all programs needs to make at least one transition from a synchronous context to an asynchronous one.
 
+## Ad-Hoc
+
+You need to call some async function from a synchronous one.
+
+```swift
+func work() async throws {
+}
+```
+
+### Solution #1: Plain Unstructured Task
+
+```swift
+// Hazard 1: Ordering
+Task {
+    // Hazard 2: thrown errors are invisible
+    try await work()
+}
+```
+
+### Solution #2: Typed Unstructured Task
+
+Adding explicit return/error types to the `Task` will make it impossible to accidentially ignore thrown errors.
+
+```swift
+// Hazard 1: Ordering
+Task<Void, Never> {
+    try await work()
+}
+```
+
 ## Background Work
 
 You need to kick off some work from the main thread, complete it in the background, and then update some state back on the main thread.
