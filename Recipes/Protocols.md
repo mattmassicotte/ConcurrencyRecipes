@@ -37,16 +37,18 @@ extension: MyClass: MyProtocol {
 
 ### Solution #2: make the protocol async
 
-If the protocol is under your control, you can make it actor-compatible
-by making all functions async.
+If the protocol is under your control, you can make it compatible by making all functions async.
 
 ```swift
 protocol MyProtocol {
+    // hazard 1: Async Virality (for other conformances)
     func doThing(argument: String) async -> Int
 }
 
-actor MyClass: MyProtocol {
-    func doThing(argument: String) -> Int {
+@MainActor
+class MyClass: MyProtocol {
+    // hazard 2: Async Virality (for callers)
+    func doThing(argument: String) async -> Int {
         return 42
     }
 }
