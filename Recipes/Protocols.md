@@ -34,3 +34,20 @@ extension: MyClass: MyProtocol {
     }
 }
 ```
+
+### Solution #2: make the protocol async
+
+If the protocol is under your control, you can make it actor-compatible
+by making all functions async.
+
+```swift
+protocol MyProtocol {
+    func doThing(argument: String) async -> Int
+}
+
+actor MyClass: MyProtocol {
+    func doThing(argument: String) -> Int {
+        return 42
+    }
+}
+```
