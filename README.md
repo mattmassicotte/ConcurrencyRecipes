@@ -13,6 +13,7 @@ Quick definitions for the hazards referenced throughout the recipes:
 - Sendability: types that cross isolation domains must be sendable. This isn't always easy, and for types you do not control, not possible.
 - Blocking: Swift concurrency uses a fixed-size thread pool. Tying up background threads can lead lag and even deadlock.
 - Availability: Concurrency is evolving rapidly, and some APIs require the latest SDK.
+- Async virality: Making a function async affects all its callsites. This can result in a large number of changes, each of which could, itself, affect subsequence callsites.
 
 ## Table of Contents
 
