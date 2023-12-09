@@ -6,6 +6,10 @@ Once you are in an async context, you can make use of structured concurrency.
 
 You'd like to lazily compute an async value and cache the result.
 
+### Anti-Solution: Ignoring actor reentrancy
+
+I wanted to post this just to specifically highlight that this does not work correctly, but could be tempting.
+
 ```swift
 actor MyActor {
     private var expensiveValue: Int?
