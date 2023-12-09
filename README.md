@@ -14,12 +14,14 @@ Quick definitions for the hazards referenced throughout the recipes:
 - Blocking: Swift concurrency uses a fixed-size thread pool. Tying up background threads can lead lag and even deadlock.
 - Availability: Concurrency is evolving rapidly, and some APIs require the latest SDK.
 - Async virality: Making a function async affects all its callsites. This can result in a large number of changes, each of which could, itself, affect subsequence callsites.
+- Actor Reentrancy: More than one thread can enter an Actor's async methods. An actor's state can change across awaits.
 
 ## Table of Contents
 
 - [Creating an Async Context](Recipes/AsyncContext.md)
 - [Using Protocols](Recipes/Protocols.md)
 - [Sendability](Recipes/Sendability.md)
+- [Structured Concurrency](Recipes/Structured.md)
 
 ## Contributing and Collaboration
 
