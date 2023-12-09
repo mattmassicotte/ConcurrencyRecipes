@@ -72,47 +72,57 @@ It is **essential** you understand the special properties of `withCheckedContinu
 
 ```swift
 actor MyActor {
-    private var expensiveValue: Int?
-    private var pendingContinuations = [CheckedContinuation<Int, Never>]()
-    
+    typealias ValueContinuation = CheckedContinuation<Int, Never>
+
+    enum State {
+        case empty
+        case pending([ValueContinuation])
+        case filled(Int)
+    }
+
+    private var state = State.empty
+
     private func makeValue() async -> Int {
         0 // we'll pretend this is really expensive
     }
-    
-    private func resumeAllPending(with value: Int) {
-        for continuation in pendingContinuations {
-            continuation.resume(returning: value)
+
+    private func fill(with result: Int) {
+        guard case let .pending(array) = state else { fatalError() }
+
+        for continuation in array {
+            continuation.resume(returning: result)
         }
-        
-        pendingContinuations.removeAll()
+
+        self.state = .filled(result)
     }
-    
+
+    private func trackContinuation(_ continuation: ValueContinuation) {
+        guard case var .pending(array) = state else { fatalError() }
+
+        array.append(continuation)
+
+        self.state = .pending(array)
+    }
+
     public var value: Int {
         get async {
-            let hasWaiters = pendingContinuations.isEmpty == false
-            
-            switch (expensiveValue, hasWaiters) {
-            case (let value?, false):
-                // we have a value and no waiters, so we can just return
+            switch state {
+            case let .filled(value):
                 return value
-            case (let value?, true):
-                // while easy to handle, this situation represents an error in our continuation management and should never actually happen
-                fatalError()
-            case (nil, true):
+            case .pending:
                 // we have no value (yet!), but we do have waiters. When this continuation is finally resumed, it will have the value we produce
-                
-                // make sure you unstand the special behavior of withCheckedContinuation that makes this safe!
+
                 return await withCheckedContinuation { continuation in
-                    pendingContinuations.append(continuation)
+                    trackContinuation(continuation)
                 }
-            case (nil, false):
-                // this is the first request
-                
+            case .empty:
+                // this is the first request with no other pending continuations. It's critical that we make a synchronous state transition to ensure new callers are routed correctly.
+                self.state = .pending([])
+
                 let value = await makeValue()
-                
-                // at this point, other continuations may have been created. We must resume all of them *and* clear the list.
-                resumeAllPending(with: value)
-                
+
+                fill(with: value)
+
                 return value
             }
         }
