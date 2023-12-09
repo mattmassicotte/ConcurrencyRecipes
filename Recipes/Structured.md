@@ -115,3 +115,86 @@ actor MyActor {
     }
 }
 ```
+
+### Solution #2: Track Continuations with Cancellation Support
+
+Here is a generic cache solution with also supports cancellation. It's complicated! It uses the `withTaskCancellationHandler`, which has similar properties to `withCheckedContinuation`.
+
+```swift
+actor AsyncCache<Value> where Value: Sendable {
+    typealias ValueContinuation = CheckedContinuation<Value, Error>
+    typealias ValueResult = Result<Value, Error>
+
+    private var expensiveValue: ValueResult?
+    private var pendingContinuations = [UUID: ValueContinuation]()
+    private let valueProvider: () async throws -> Value
+
+    init(valueProvider: @escaping () async throws -> Value) {
+        self.valueProvider = valueProvider
+    }
+
+    private func makeValue() async throws -> Value {
+        try await valueProvider()
+    }
+
+    private func cancelContinuation(with id: UUID) {
+        // remember that cancellation could happen after we have already resumed the continuation
+        pendingContinuations[id]?.resume(throwing: CancellationError())
+    }
+
+    private func resumeAllContinuations(with result: ValueResult) {
+        for continuation in pendingContinuations.values {
+            continuation.resume(with: result)
+        }
+
+        pendingContinuations.removeAll()
+    }
+
+    private func trackContinuation(_ continuation: ValueContinuation, with id: UUID) {
+        pendingContinuations[id] = continuation
+    }
+
+    public var value: Value {
+        get async throws {
+            let hasWaiters = pendingContinuations.isEmpty == false
+            
+            switch (expensiveValue, hasWaiters) {
+            case (let value?, false):
+                // we have a value and no waiters, so we can just return
+                return try value.get()
+            case (let value?, true):
+                // invalid situation, see above solution
+                fatalError()
+            case (nil, true):
+                // we have no value (yet!), but we do have waiters. When this continuation is finally resumed, it will have the value we produce
+
+                let id = UUID() // produce a unique identifier for this particular request
+
+                return try await withTaskCancellationHandler {
+                    try await withCheckedThrowingContinuation { continuation in
+                        // this has to go through a function call because the compiler seems unhappy if I reference pendingContinuations directly
+                        trackContinuation(continuation, with: id)
+                    }
+                } onCancel: {
+                    // we must move back to this actor here to access its state, referencing the unique continuation id
+                    Task { await self.cancelContinuation(with: id) }
+                }
+            case (nil, false):
+                // this is the first request with no other pending continuations
+
+                do {
+                    let value = try await makeValue()
+
+                    resumeAllContinuations(with: .success(value))
+
+                    return value
+                } catch {
+                    resumeAllContinuations(with: .failure(error))
+
+                    throw error
+                }
+            }
+        }
+    }
+}
+```
