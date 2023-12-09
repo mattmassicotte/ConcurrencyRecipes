@@ -120,7 +120,7 @@ actor MyActor {
 }
 ```
 
-### Solution #2: Track Continuations with Cancellation Support
+### Solution #3: Track Continuations with Cancellation Support
 
 Here is a generic cache solution with also supports cancellation. It's complicated! It uses the `withTaskCancellationHandler`, which has similar properties to `withCheckedContinuation`.
 
@@ -129,8 +129,13 @@ actor AsyncCache<Value> where Value: Sendable {
     typealias ValueContinuation = CheckedContinuation<Value, Error>
     typealias ValueResult = Result<Value, Error>
 
-    private var expensiveValue: ValueResult?
-    private var pendingContinuations = [UUID: ValueContinuation]()
+    enum State {
+        case empty
+        case pending([UUID: ValueContinuation])
+        case filled(ValueResult)
+    }
+
+    private var state = State.empty
     private let valueProvider: () async throws -> Value
 
     init(valueProvider: @escaping () async throws -> Value) {
@@ -140,36 +145,41 @@ actor AsyncCache<Value> where Value: Sendable {
     private func makeValue() async throws -> Value {
         try await valueProvider()
     }
-
+    
     private func cancelContinuation(with id: UUID) {
-        // remember that cancellation could happen after we have already resumed the continuation
-        pendingContinuations[id]?.resume(throwing: CancellationError())
+        guard case var .pending(dictionary) = state else { return }
+
+        dictionary[id]?.resume(throwing: CancellationError())
+        dictionary[id] = nil
+
+        self.state = .pending(dictionary)
     }
 
-    private func resumeAllContinuations(with result: ValueResult) {
-        for continuation in pendingContinuations.values {
+    private func fill(with result: ValueResult) {
+        guard case let .pending(dictionary) = state else { fatalError() }
+
+        for continuation in dictionary.values {
             continuation.resume(with: result)
         }
 
-        pendingContinuations.removeAll()
+        self.state = .filled(result)
     }
 
     private func trackContinuation(_ continuation: ValueContinuation, with id: UUID) {
-        pendingContinuations[id] = continuation
+        guard case var .pending(dictionary) = state else { fatalError() }
+
+        precondition(dictionary[id] == nil)
+        dictionary[id] = continuation
+
+        self.state = .pending(dictionary)
     }
 
     public var value: Value {
         get async throws {
-            let hasWaiters = pendingContinuations.isEmpty == false
-            
-            switch (expensiveValue, hasWaiters) {
-            case (let value?, false):
-                // we have a value and no waiters, so we can just return
+            switch state {
+            case let .filled(value):
                 return try value.get()
-            case (let value?, true):
-                // invalid situation, see above solution
-                fatalError()
-            case (nil, true):
+            case .pending:
                 // we have no value (yet!), but we do have waiters. When this continuation is finally resumed, it will have the value we produce
 
                 let id = UUID() // produce a unique identifier for this particular request
@@ -183,17 +193,18 @@ actor AsyncCache<Value> where Value: Sendable {
                     // we must move back to this actor here to access its state, referencing the unique continuation id
                     Task { await self.cancelContinuation(with: id) }
                 }
-            case (nil, false):
-                // this is the first request with no other pending continuations
+            case .empty:
+                // this is the first request with no other pending continuations. It's critical that we make a synchronous state transition to ensure new callers are routed correctly.
+                self.state = .pending([:])
 
                 do {
                     let value = try await makeValue()
 
-                    resumeAllContinuations(with: .success(value))
+                    fill(with: .success(value))
 
                     return value
                 } catch {
-                    resumeAllContinuations(with: .failure(error))
+                    fill(with: .failure(error))
 
                     throw error
                 }
@@ -201,4 +212,5 @@ actor AsyncCache<Value> where Value: Sendable {
         }
     }
 }
+
 ```
