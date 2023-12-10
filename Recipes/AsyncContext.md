@@ -37,54 +37,61 @@ Task<Void, Never> {
 You need to kick off some work from the main thread, complete it in the background, and then update some state back on the main thread.
 
 ```swift
-beforeWorkBegins()
+func doWork() {}
+    // We assume we're on the main thread here
+    beforeWorkBegins()
 
-DispatchQueue.global.async {
-    let possibleResult = expensiveWork(arguments)
-    
-    DispatchQueue.main.async {
-        afterWorkIsDone(possibleResult)
+    DispatchQueue.global.async {
+        let possibleResult = expensiveWork(arguments)
+        
+        DispatchQueue.main.async {
+            afterWorkIsDone(possibleResult)
+        }
     }
 }
 ```
 
-### Solution #1: the work can be made async
+### Solution #1: Someone wrote an `async` wrapper for `expensiveWork()`
 
-Assumptions: both `beforeWorkBegins` and `afterWorkIsDone` are `MainActor`-isolated, and we are starting on the main thread
+If there is an `async` wrapper for `expensiveWork()`, the "background work" recipe is simpler in the world of structured concurrency. This recipe assumes that both `arguments` and `result` are `Sendable` (safe to cross isolation domains). Note this was true in the dispatch-queue based world, too!
 
 ```swift
-// hazard 1: timing. Does this call happen here, or within the Task?
-beforeWorkBegins()
-
-// hazard 2: ordering
-Task {
-    // MainActor-ness has been inherited from the creating context.
-
-    // hazard 3: lack of caller control
-    // hazard 3: sendability (for both `result and `arguments`)
+@MainActor
+func doWork() async {
+    beforeWorkBegins()
     let result = await asyncExpensiveWork(arguments)
-
-    // post-await we are now back on the original, MainActor context
-    afterWorkIsDone(result)
+    afterWorkIsDone()
 }
 ```
 
-### Solution #2: the work must be synchronous
+### Solution #2: Write your own async wrapper for `expensiveWork()`
+
+Suppose there isn't an `async` version of `expensiveWork()`, so you can't directly use Solution #1. 
+
+One option: Write your own wrapper, then proceed with Solution #1!
 
 ```swift
+func asyncExpensiveWork(arguments: Arguments) async -> Result {
+    await withCheckedContinuation { continuation in
+        DispatchQueue.global.async {
+            let result = expensiveWork(arguments)
+            continuation.resume(returning: result)
+        }
+    }
+}
+```
 
-// Work must start here, because we're going to explicitly hop off the MainActor
-beforeWorkBegins()
+Yes, this just sneaks `DispatchQueue.global.async()` into the Swift Structured Concurrency world. However, this seems appropriate: You won't tie up one of the threads in the cooperative thread pool to execute `expensiveWork()`. Another advantage of this approach: It's now baked into the implementation of `asyncExpensiveWork()` that the expensive stuff happens on a background thread. You can't accidentally run the code in the main actor context.
 
-// hazard 1: ordering
-Task.detached {
-    // hazard 2: blocking
-    // hazard 3: sendability (arguments)
-    let possibleResult = expensiveWork(arguments)
-    
-    // hazard 4: sendability (possibleResult)
-    await MainActor.run {
-        afterWorkIsDone(possibleResult)
+**Sidenote** To Swift, `func foo()` and `func foo() async` are different and the compiler knows which one to use depending on if the callsite is a synchronous or asynchronous context. This means your async wrappers can have the same naming as their synchronous counterparts:
+
+```swift
+func expensiveWork(arguments: Arguments) async -> Result {
+    await withCheckedContinuation { continuation in
+        DispatchQueue.global.async {
+            let result = expensiveWork(arguments)
+            continuation.resume(returning: result)
+        }
     }
 }
 ```
