@@ -34,45 +34,95 @@ Task<Void, Never> {
 
 ## Background Work
 
-You need to kick off some work from the main thread, complete it in the background, and then update some state back on the main thread.
+This is an extremely common pattern in Swift code pre-structured-concurrency: You need to kick off some work from the main thread, complete it in the background, and then update some state back on the main thread. For example, you might need to add a spinner and disable some buttons in the "before" stage, do an expensive computation in the "background" stage, then update the UI again in the "after" stage.
 
 ```swift
-func doWork() {}
-    // We assume we're on the main thread here
-    beforeWorkBegins()
+final class DemoViewController: UIViewController {
+    func doWork() {
+        // We assume we're on the main thread here
+        beforeWorkBegins()
 
-    DispatchQueue.global.async {
-        let possibleResult = expensiveWork(arguments)
-        
-        DispatchQueue.main.async {
-            afterWorkIsDone(possibleResult)
+        DispatchQueue.global.async {
+            let possibleResult = expensiveWork(arguments)
+            
+            DispatchQueue.main.async {
+                afterWorkIsDone(possibleResult)
+            }
         }
     }
 }
 ```
 
-### Solution #1: Someone wrote an `async` wrapper for `expensiveWork()`
+This pattern, in the pre-structured-concurrency world, provides the following properties:
 
-If there is an `async` wrapper for `expensiveWork()`, the "background work" recipe is simpler in the world of structured concurrency. This recipe assumes that both `arguments` and `result` are `Sendable` (safe to cross isolation domains). Note this was true in the dispatch-queue based world, too!
+1. **Ordering**: You know `beforeWorkBegins()` runs before `expensiveWorks()` which runs before `afterWorkIsDone()`.
+2. **Thread-safety**: You know `beforeWorkBegins()` and `afterWorkIsDone()` run on the main thread and `expensiveWork()` runs on a background thread.
+3. **"Immediacy"**: There is no "waiting" before running `beforeWorkBegins()`.
+
+There are different recipes for recreating this pattern in Structured Concurrency and preserving these properties depending upon:
+
+1. Does an asynchronous wrapper exist for `expensiveWork()`?
+2. Does the _immediacy_ property need to be preserved for a synchronous or asynchronous context?
+
+### Solution #1: Asynchronous wrapper exists & "synchronous immediacy"
+
+This recipe assumes there is an asynchronous wrapper for `expensiveWork()` and ensures that `beforeWorkBegins()` runs without any waiting in the caller's synchronous context. 
 
 ```swift
-@MainActor
-func doWork() async {
-    beforeWorkBegins()
-    let result = await asyncExpensiveWork(arguments)
-    afterWorkIsDone()
+final class DemoViewController: UIViewController {
+    func doWork() {
+        // hazard 1: timing. 
+        //
+        // If you moved this to inside the `Task`, you'd introduce a "wait" before 
+        // executing `beforeWorkBegins()`, losing the "immediacy" property.
+        beforeWorkBegins()
+
+        // hazard 2: ordering
+        //
+        // While this recipe guarantees that `beforeWorkBegins()` happens before
+        // `asyncExpensiveWork()`, if there are any **other** Tasks that are
+        // created by the caller, there is no ordering guarantees among the tasks.
+        // This differs from the DispatchQueue.global.async() world, where blocks
+        // run in the order in which they are submitted to the queue.
+        Task {
+            // MainActor-ness has been inherited from the creating context.
+            // hazard 3: lack of caller control
+            // hazard 3: sendability (for both `result and `arguments`)
+            let result = await asyncExpensiveWork(arguments)
+            // post-await we are now back on the original, MainActor context
+            afterWorkIsDone(result)
+        }
+    }
 }
 ```
 
-### Solution #2: Write your own async wrapper for `expensiveWork()`
+### Solution #2: Asynchronous wrapper exists & "asynchronous immediacy"
 
-Suppose there isn't an `async` version of `expensiveWork()`, so you can't directly use Solution #1. 
+If all of the callers of `doWork()` are already in asynchronous contexts, or if the callers can easily be made asynchronous (beware the "async virality" hazard), you can use this recipe:
 
-One option: Write your own wrapper, then proceed with Solution #1!
+```swift
+final class DemoViewController: UIViewController {
+    // hazard 1: async virality. Can you reasonably change all callsites to `async`?
+    func doWork() async {
+        beforeWorkBegins()
+        let result = await asyncExpensiveWork(arguments)
+        afterWorkIsDone(arguments)
+    }
+}
+```
+
+This recipe preserves immediacy of `beforeWorkBegins()` for any asynchronous callers and avoids introducing additional unstructured `Task` operations.
+
+### Solution #3: No async wrapper exists for `expensiveWork()`
+
+If there is no `async` wrapper for `expensiveWork()`, you cannot directly use Solutions 1 or 2. 
+
+One option you have: Write your own `async` wrapper, then proceed with Solution 1 or 2!
 
 ```swift
 func asyncExpensiveWork(arguments: Arguments) async -> Result {
     await withCheckedContinuation { continuation in
+        // Hazard: Are you using the appropriate quality of service queue?
         DispatchQueue.global.async {
             let result = expensiveWork(arguments)
             continuation.resume(returning: result)
@@ -91,6 +141,29 @@ func expensiveWork(arguments: Arguments) async -> Result {
         DispatchQueue.global.async {
             let result = expensiveWork(arguments)
             continuation.resume(returning: result)
+        }
+    }
+}
+```
+
+### Solution #4: No async wrapper exists and you don't want to write one
+
+```swift
+final class DemoViewController: UIViewController {
+    func doWork() {
+        // Work must start here, because we're going to explicitly hop off the MainActor
+        beforeWorkBegins()
+
+        // hazard 1: ordering
+        Task.detached {
+            // hazard 2: blocking
+            // hazard 3: sendability (arguments)
+            let possibleResult = expensiveWork(arguments)
+            
+            // hazard 4: sendability (possibleResult)
+            await MainActor.run {
+                afterWorkIsDone(possibleResult)
+            }
         }
     }
 }
