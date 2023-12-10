@@ -134,6 +134,8 @@ actor MyActor {
 
 Here is a generic cache solution with also supports cancellation. It's complicated! It uses the `withTaskCancellationHandler`, which has similar properties to `withCheckedContinuation`.
 
+It is important to note that this implementation makes the very first request special, as it is actually filling in the cache. Cancelling the first request will have the effect of cancelling all other requests.
+
 ```swift
 actor AsyncCache<Value> where Value: Sendable {
     typealias ValueContinuation = CheckedContinuation<Value, Error>
@@ -222,5 +224,115 @@ actor AsyncCache<Value> where Value: Sendable {
         }
     }
 }
+```
 
+### Solution #4: Hybrid Approach
+
+This is a hybrid structured/unstructured implemenation. It ensures that the cancellation behavior is the same across all requests, even the first. The downside to this is priority propagation will not work for the initial cache fill. This means that should a higher priority task end up needing the result, its priority will not be boosted.
+
+```swift
+actor AsyncCache<Value> where Value: Sendable {
+    typealias ValueContinuation = CheckedContinuation<Value, Error>
+    typealias ValueResult = Result<Value, Error>
+
+    enum State {
+        case empty
+        case pending(Task<Void, Never>, [UUID: ValueContinuation])
+        case filled(ValueResult)
+    }
+
+    private var state = State.empty
+    private let valueProvider: () async throws -> Value
+    private let fillOnCancel: Bool
+
+    init(fillOnCancel: Bool = true, valueProvider: @escaping () async throws -> Value) {
+        self.valueProvider = valueProvider
+        self.fillOnCancel = fillOnCancel
+    }
+
+    private func makeValue() async throws -> Value {
+        try await valueProvider()
+    }
+
+    private func cancelContinuation(with id: UUID) {
+        guard case .pending(let task, var dictionary) = state else { return }
+
+        dictionary[id]?.resume(throwing: CancellationError())
+        dictionary[id] = nil
+
+        guard dictionary.isEmpty else {
+            self.state = .pending(task, dictionary)
+            return
+        }
+
+        // if we have cancelled all continuations, should we cancel the underlying work?
+        if fillOnCancel == false {
+            task.cancel()
+            self.state = .empty
+            return
+        }
+    }
+
+    private func fill(with result: ValueResult) {
+        switch state {
+        case .empty:
+            // This should only occur if we have cancelled and do not want to fill the cache regardless. This is technically wasted work, but may be desirable for some uses.
+            precondition(fillOnCancel == false)
+        case let .pending(_, dictionary):
+            for continuation in dictionary.values {
+                continuation.resume(with: result)
+            }
+
+            self.state = .filled(result)
+        case .filled:
+            fatalError()
+        }
+    }
+
+    private func trackContinuation(_ continuation: ValueContinuation, with id: UUID) {
+        guard case .pending(let task, var dictionary) = state else { fatalError() }
+
+        precondition(dictionary[id] == nil)
+        dictionary[id] = continuation
+
+        self.state = .pending(task, dictionary)
+    }
+
+    public var value: Value {
+        get async throws {
+            switch state {
+            case let .filled(value):
+                return try value.get()
+            case .pending:
+                break
+            case .empty:
+                // Begin an unstructured task to fill the cache. This gives all requests including first the same cancellation semantics.
+                let task = Task {
+                    do {
+                        let value = try await makeValue()
+
+                        fill(with: .success(value))
+                    } catch {
+                        fill(with: .failure(error))
+                    }
+                }
+
+                // this is the first request with no other pending continuations. It's critical that we make a synchronous state transition to ensure new callers are routed correctly.
+                self.state = .pending(task, [:])
+            }
+
+            let id = UUID() // produce a unique identifier for this request
+
+            return try await withTaskCancellationHandler {
+                try await withCheckedThrowingContinuation { continuation in
+                    // this has to go through a function call because the compiler seems unhappy if I reference pendingContinuations directly
+                    trackContinuation(continuation, with: id)
+                }
+            } onCancel: {
+                // we must move back to this actor here to access its state, referencing the unique continuation id
+                Task { await self.cancelContinuation(with: id) }
+            }
+        }
+    }
+}
 ```
