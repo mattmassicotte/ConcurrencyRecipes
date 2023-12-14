@@ -34,7 +34,7 @@ Task<Void, Never> {
 
 ## Background Work
 
-This is an extremely common pattern in Swift code pre-structured-concurrency: You need to kick off some work from the main thread, complete it in the background, and then update some state back on the main thread. For example, you might need to add a spinner and disable some buttons in the "before" stage, do an expensive computation in the "background" stage, then update the UI again in the "after" stage.
+This is an extremely common pattern in Swift code: You need to kick off some work from the main thread, complete it in the background, and then update some state back on the main thread. For example, you might need to add a spinner and disable some buttons in the "before" stage, do an expensive computation in the "background" stage, then update the UI again in the "after" stage. Using DispatchQueues, you could write the code like this:
 
 ```swift
 final class DemoViewController: UIViewController {
@@ -53,13 +53,13 @@ final class DemoViewController: UIViewController {
 }
 ```
 
-This pattern, in the pre-structured-concurrency world, provides the following properties:
+This DispatchQueue pattern provides the following properties:
 
 1. **Ordering**: You know `beforeWorkBegins()` runs before `expensiveWorks()` which runs before `afterWorkIsDone()`.
 2. **Thread-safety**: You know `beforeWorkBegins()` and `afterWorkIsDone()` run on the main thread and `expensiveWork()` runs on a background thread.
 3. **"Immediacy"**: There is no "waiting" before running `beforeWorkBegins()`.
 
-There are different recipes for recreating this pattern in Structured Concurrency and preserving these properties depending upon:
+There are different recipes for recreating this pattern in Swift Concurrency and preserving these properties depending upon:
 
 1. Does an asynchronous wrapper exist for `expensiveWork()`?
 2. Does the _immediacy_ property need to be preserved for a synchronous or asynchronous context?
@@ -83,7 +83,7 @@ final class DemoViewController: UIViewController {
         // `asyncExpensiveWork()`, if there are any **other** Tasks that are
         // created by the caller, there is no ordering guarantees among the tasks.
         // This differs from the DispatchQueue.global.async() world, where blocks
-        // run in the order in which they are submitted to the queue.
+        // are started in the order in which they are submitted to the queue.
         Task {
             // MainActor-ness has been inherited from the creating context.
             // hazard 3: lack of caller control
@@ -131,7 +131,7 @@ func asyncExpensiveWork(arguments: Arguments) async -> Result {
 }
 ```
 
-Yes, this just sneaks `DispatchQueue.global.async()` into the Swift Structured Concurrency world. However, this seems appropriate: You won't tie up one of the threads in the cooperative thread pool to execute `expensiveWork()`. Another advantage of this approach: It's now baked into the implementation of `asyncExpensiveWork()` that the expensive stuff happens on a background thread. You can't accidentally run the code in the main actor context.
+Yes, this just sneaks `DispatchQueue.global.async()` into the Swift Concurrency world. However, this seems appropriate: You won't tie up one of the threads in the cooperative thread pool to execute `expensiveWork()`. Another advantage of this approach: It's now baked into the implementation of `asyncExpensiveWork()` that the expensive stuff happens on a background thread. You can't accidentally run the code in the main actor context.
 
 **Sidenote** To Swift, `func foo()` and `func foo() async` are different and the compiler knows which one to use depending on if the callsite is a synchronous or asynchronous context. This means your async wrappers can have the same naming as their synchronous counterparts:
 
