@@ -1,7 +1,7 @@
 # ConcurrencyRecipes
 Practical solutions to problems with Swift Concurrency
 
-Swift Concurrency can be really hard to use. I thought it could be handy to document and share solutions and hazards you might face along the way. I am **absolutely not** saying this is comprehensive, or that the solutions presents are great. I'm learning too. Contributions are very welcome, especially for problems!
+Swift Concurrency can be really hard to use. I thought it could be handy to document and share solutions and hazards you might face along the way. I am **absolutely not** saying this is comprehensive, or that the solutions presented are great. I'm learning too. Contributions are very welcome, especially for problems!
 
 ## Hazards
 
