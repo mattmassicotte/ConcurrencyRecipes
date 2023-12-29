@@ -1,6 +1,6 @@
 # Sendability
 
-Passing data around across isolation domains means you the types to conform to [Sendable](https://developer.apple.com/documentation/swift/sendable).
+Passing data around across isolation domains means you need the types to conform to [Sendable](https://developer.apple.com/documentation/swift/sendable).
 
 ## Non-Sendable Arguments
 

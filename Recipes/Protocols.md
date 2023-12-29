@@ -15,7 +15,7 @@ protocol MyProtocol {
 class MyClass {
 }
 
-extension: MyClass: MyProtocol {
+extension MyClass: MyProtocol {
     func doThing(argument: ArgumentType) -> ResultType {
     }
 }
@@ -24,7 +24,7 @@ extension: MyClass: MyProtocol {
 ### Solution #1: non-isolated conformance
 
 ```swift
-extension: MyClass: MyProtocol {
+extension MyClass: MyProtocol {
     nonisolated func doThing(argument: ArgumentType) -> ResultType {
         // at this point, you likely need to interact with self, so you must satisfy the compiler
         // hazard 1: Availability
