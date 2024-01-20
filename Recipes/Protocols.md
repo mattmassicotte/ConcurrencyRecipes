@@ -73,8 +73,8 @@ class MyClass {
 
 extension MyClass: ObjectNonConcurrentDelegate { // <------- Not the best way ❗
     // ERROR!: You would need to mark the method nonisolated like Solution #1.
-    // But sometimes we would need to access our class properites, which means we would
-    // be accessing our actor from outside the actor system and this could lead to
+    // But sometimes we want to access our class properites, which means we would
+    // be accessing our actor from outside the actor system/boundries and this could lead to
     // data races and threading issues, which is what we want to avoid
     // when we use actors in the first place!
     nonisolated func someMethod() {
@@ -84,6 +84,9 @@ extension MyClass: ObjectNonConcurrentDelegate { // <------- Not the best way �
 
 // Wrapper Solution 👇🏼
 protocol MyWrapperConcurrentDelegate {
+    // Keep in mind this will only only if the paramters and/or
+    // return types are Sendable, or the method doens't have any,
+    // like in this example.
     func someConcurrentMethod() async
 }
 
@@ -101,6 +104,8 @@ class MyObjectWrapper: ObjectNonConcurrentDelegate {
         // Async Context hazards
         /// see AsyncContext Recipe
         Task {
+            // This solution will only work if someMethod() doesn't
+            // return anything.
             concurrentProtocol?.someConcurrentMethod()
         }
     }
@@ -125,4 +130,3 @@ extension MyClass: MyWrapperConcurrentDelegate {
     }
 }
 ```
-This solution might not be the best, but it's the safest I have found to ensure thread safety in the actor and avoid data races from nonisolated methods.
