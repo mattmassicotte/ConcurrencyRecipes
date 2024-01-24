@@ -55,14 +55,12 @@ class MyClass: MyProtocol {
 ```
 
 ### Solutions #3: Create a wrapper around the protocol
-If the protocol you want to confirm to is not under your control, and the protocol is non-isolated, you can create a non-concurrent wrapper around the protocol and then create an async protocol for your actor. For example, URLSession delegates that are not async.
+If the protocol you want to conform to in your actor is not under your control, and the protocol is non-isolated, you can create a non-concurrent wrapper around the protocol and then create an async protocol for your actor. For example, URLSession delegates that are not async.
 E.g:
 
 ```swift
-// This could also be an actor instead of a class.
-@MainActor
-class MyClass {
-    var myClassProperty = "pew"
+actor MyActor {
+    var myActorProperty = "pew"
     let someObject: Object
 
     init() {
@@ -71,20 +69,20 @@ class MyClass {
     }
 }
 
-extension MyClass: ObjectNonConcurrentDelegate { // <------- Not the best way ❗
+extension MyActor: ObjectNonConcurrentDelegate { // <------- Not the best way ❗
     // ERROR!: You would need to mark the method nonisolated like Solution #1.
-    // But sometimes we want to access our class properites, which means we would
+    // But sometimes we want to access our actor's properites, which means we would
     // be accessing our actor from outside the actor system/boundries and this could lead to
     // data races and threading issues, which is what we want to avoid
     // when we use actors in the first place!
     nonisolated func someMethod() {
-        myClassProperty = "blob"
+        myActorProperty = "blob"
     }
 }
 
 // Wrapper Solution 👇🏼
 protocol MyWrapperConcurrentDelegate {
-    // Keep in mind this will only only if the paramters and/or
+    // Keep in mind this will only work if the parameters and
     // return types are Sendable, or the method doens't have any,
     // like in this example.
     func someConcurrentMethod() async
@@ -111,9 +109,8 @@ class MyObjectWrapper: ObjectNonConcurrentDelegate {
     }
 }
 
-@MainActor
-class MyClass {
-    var myClassProperty = "pew"
+actor MyActor {
+    var myActorProperty = "pew"
     let wrapperObject: MyObjectWrapper
 
     init() {
@@ -122,11 +119,11 @@ class MyClass {
     }
 }
 
-extension MyClass: MyWrapperConcurrentDelegate {
+extension MyActor: MyWrapperConcurrentDelegate {
     func someConcurrentMethod() async {
         // Safe to access our property because we are now
         // in a concurrent context!
-        myClassProperty = "blob"
+        myActorProperty = "blob"
     }
 }
 ```
