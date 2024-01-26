@@ -53,3 +53,77 @@ class MyClass: MyProtocol {
     }
 }
 ```
+
+### Solutions #3: Create a wrapper around the protocol
+If the protocol you want to conform to in your actor is not under your control, and the protocol is non-isolated, you can create a non-concurrent wrapper around the protocol and then create an async protocol for your actor. For example, URLSession delegates that are not async.
+E.g:
+
+```swift
+actor MyActor {
+    var myActorProperty = "pew"
+    let someObject: Object
+
+    init() {
+        someObject = Object()
+        someObject.delegate = self // <----- We want to use the object delegate calls
+    }
+}
+
+extension MyActor: ObjectNonConcurrentDelegate { // <------- Not the best way ❗
+    // ERROR!: You would need to mark the method nonisolated like Solution #1.
+    // But sometimes we want to access our actor's properites, which means we would
+    // be accessing our actor from outside the actor system/boundries and this could lead to
+    // data races and threading issues, which is what we want to avoid
+    // when we use actors in the first place!
+    nonisolated func someMethod() {
+        myActorProperty = "blob"
+    }
+}
+
+// Wrapper Solution 👇🏼
+protocol MyWrapperConcurrentDelegate {
+    // Keep in mind this will only work if the parameters and
+    // return types are Sendable, or the method doens't have any,
+    // like in this example.
+    func someConcurrentMethod() async
+}
+
+class MyObjectWrapper: ObjectNonConcurrentDelegate {
+
+    weak var concurrentDelegate: MyWrapperConcurrentDelegate?
+    let someObject: Object
+
+    init() {
+        someObject = Object()
+        someObject.delegate = self
+    }
+
+    func someMethod() {
+        // Async Context hazards
+        /// see AsyncContext Recipe
+        Task {
+            // This solution will only work if someMethod() doesn't
+            // return anything.
+            concurrentProtocol?.someConcurrentMethod()
+        }
+    }
+}
+
+actor MyActor {
+    var myActorProperty = "pew"
+    let wrapperObject: MyObjectWrapper
+
+    init() {
+        wrapperObject = MyObjectWrapper()
+        wrapperObject.concurrentDelegate = self
+    }
+}
+
+extension MyActor: MyWrapperConcurrentDelegate {
+    func someConcurrentMethod() async {
+        // Safe to access our property because we are now
+        // in a concurrent context!
+        myActorProperty = "blob"
+    }
+}
+```
