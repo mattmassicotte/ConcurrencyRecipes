@@ -4,7 +4,7 @@ Protocols are widely used in Swift APIs, but can present unique challenges with 
 
 ## Non-isolated Protocol
 
-You have a non-isolated protocol, but need to add conformance to an actor-isolated type.
+You have a non-isolated protocol, but need to add conformance to an MainActor-isolated type.
 
 ```swift
 protocol MyProtocol {
@@ -54,76 +54,60 @@ class MyClass: MyProtocol {
 }
 ```
 
-### Solutions #3: Create a wrapper around the protocol
-If the protocol you want to conform to in your actor is not under your control, and the protocol is non-isolated, you can create a non-concurrent wrapper around the protocol and then create an async protocol for your actor. For example, URLSession delegates that are not async.
-E.g:
+### Solutions #3: non-isolated actor conformance
+
+You can also use a variant of solution #1 to add conformance to an non-Main actor. This does come with limitations. Particular caution should be used if this protocol comes from Objective-C. It is common for Objective-C code to be incorrectly or insufficiently annotated, and that can result in voilations of the Swift concurrency invariants. In other words, deadlocks and isolation failure (which will produce crashes, you **hope**).
 
 ```swift
+protocol NotAsyncFriendly {
+    func informational()
+
+    func takesSendableArguments(_ value: Int)
+
+    func takesNonSendableArguments(_ value: NonSendableType)
+
+    func expectsReturnValues() -> Int
+}
+
 actor MyActor {
-    var myActorProperty = "pew"
-    let someObject: Object
-
-    init() {
-        someObject = Object()
-        someObject.delegate = self // <----- We want to use the object delegate calls
+    func doIsolatedThings(with value: Int) {
+        ...
     }
 }
 
-extension MyActor: ObjectNonConcurrentDelegate { // <------- Not the best way ❗
-    // ERROR!: You would need to mark the method nonisolated like Solution #1.
-    // But sometimes we want to access our actor's properites, which means we would
-    // be accessing our actor from outside the actor system/boundries and this could lead to
-    // data races and threading issues, which is what we want to avoid
-    // when we use actors in the first place!
-    nonisolated func someMethod() {
-        myActorProperty = "blob"
-    }
-}
-
-// Wrapper Solution 👇🏼
-protocol MyWrapperConcurrentDelegate {
-    // Keep in mind this will only work if the parameters and
-    // return types are Sendable, or the method doens't have any,
-    // like in this example.
-    func someConcurrentMethod() async
-}
-
-class MyObjectWrapper: ObjectNonConcurrentDelegate {
-
-    weak var concurrentDelegate: MyWrapperConcurrentDelegate?
-    let someObject: Object
-
-    init() {
-        someObject = Object()
-        someObject.delegate = self
-    }
-
-    func someMethod() {
-        // Async Context hazards
-        /// see AsyncContext Recipe
+extension MyActor: NotAsyncFriendly {
+    // purely informational calls are the easiest
+    nonisolated func informational() {
+        // hazard: ordering
+        // the order in which these informational messages are delivered may be important, but is now lost
         Task {
-            // This solution will only work if someMethod() doesn't
-            // return anything.
-            concurrentProtocol?.someConcurrentMethod()
+            await self.doIsolatedThings(with: 0)
         }
     }
-}
 
-actor MyActor {
-    var myActorProperty = "pew"
-    let wrapperObject: MyObjectWrapper
-
-    init() {
-        wrapperObject = MyObjectWrapper()
-        wrapperObject.concurrentDelegate = self
+    nonisolated func takesSendableArguments(_ value: Int) {
+        // hazard: ordering
+        Task {
+            // we can safely capture and/or make use of value here because it is Sendable
+            await self.doIsolatedThings(with: value)
+        }
     }
-}
+    
+    nonisolated func takesNonSendableArguments(_ value: NonSendableType) {
+        // hazard: sendability
 
-extension MyActor: MyWrapperConcurrentDelegate {
-    func someConcurrentMethod() async {
-        // Safe to access our property because we are now
-        // in a concurrent context!
-        myActorProperty = "blob"
+        // any action taken would have to either not need the actor's isolated state or `value`.
+        // That's possible, but starting to get tricky.
+    }
+
+    nonisolated func expectsReturnValues() -> Int {
+        // hazard: sendability
+
+        // Because this function expects a synchronous return value, the actor's isolated state
+        // must not be needed to generate the return. This is also possible, but is another indication
+        // that an actor might be the wrong option.
+        
+        return 42
     }
 }
 ```
