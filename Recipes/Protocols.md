@@ -111,3 +111,57 @@ extension MyActor: NotAsyncFriendly {
     }
 }
 ```
+
+### Solution #4: don't use a protocol
+
+This is not a joke! If you are in control of both the protocol and all of its usage, functions may be able to serve the same purpose. A good example of this is a delegate pattern.
+
+```swift
+// example protocol/consumer pair
+protocol MyClassDelegate: AnyObject {
+    func doThings()
+}
+
+class MyClass {
+    weak var delegate: MyClassDelegate?
+}
+
+// problematic usage:
+@MainActor
+class MyUsage {
+    let myClass: MyClass
+    
+    init() {
+        self.myClass = MyClass()
+        
+        myClass.delegate = self
+    }
+}
+
+extension MyUsage: MyClassDelegate {
+    // this needs to be non-isolated
+    nonisolated func doThings() {
+    }
+}
+```
+
+Contrast this with a function-based implementation. This provides very flexible isolation - can work with a `MainActor` type but also a plain actor.
+
+```swift
+class MyClass {
+    var doThings: () -> Void = {}
+}
+
+actor MyUsage {
+    let myClass: MyClass
+
+    init() {
+        self.myClass = MyClass()
+
+        myClass.doThings = { [unowned self] in
+            // accessing self is fine here because `doThings` is not Sendable
+            print(self)
+        }
+    }
+}
+```
