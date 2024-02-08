@@ -54,9 +54,9 @@ class MyClass: MyProtocol {
 }
 ```
 
-### Solutions #3: non-isolated actor conformance
+### Solution #3: non-isolated actor conformance
 
-You can also use a variant of solution #1 to add conformance to an non-Main actor. This does come with limitations. Particular caution should be used if this protocol comes from Objective-C. It is common for Objective-C code to be incorrectly or insufficiently annotated, and that can result in voilations of the Swift concurrency invariants. In other words, deadlocks and isolation failure (which will produce crashes, you **hope**).
+You can also use a variant of solution #1 to add conformance to an non-Main actor. This does come with limitations. Particular caution should be used if this protocol comes from Objective-C. It is common for Objective-C code to be incorrectly or insufficiently annotated, and that can result in violations of the Swift concurrency invariants. In other words, deadlocks and isolation failure (which will produce crashes, you **hope**).
 
 ```swift
 protocol NotAsyncFriendly {
