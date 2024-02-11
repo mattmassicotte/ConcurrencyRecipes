@@ -20,7 +20,7 @@ func useTheType() {
 
 ## Solution #1: `@preconcurrency`
 
-This is an easy one. You can just import the library with ``@preconcurrency`.
+This is an easy one. You can just import the library with `@preconcurrency`.
 
 ```Swift
 @preconcurrency import TheLibrary
