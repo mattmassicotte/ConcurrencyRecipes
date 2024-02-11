@@ -36,6 +36,8 @@ func useTheType() {
 
 ## Solution #2: use static isolation
 
+This addresses the issue because it forces all accesses to be isolated to a single actor.
+
 ```Swift
 import TheLibrary
 
@@ -51,7 +53,7 @@ func useTheType() {
 
 ## Solution #3: use dynamic isolation
 
-Note that is doesn't work as of Swift 5.10, but hopefully will [soon](https://forums.swift.org/t/isolation-assumptions/69514)!.
+This is a more-flexible version of #2. Note that is doesn't work as of Swift 5.10, but hopefully will [soon](https://forums.swift.org/t/isolation-assumptions/69514)!.
 
 ```Swift
 import TheLibrary
