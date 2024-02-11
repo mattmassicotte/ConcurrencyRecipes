@@ -4,7 +4,7 @@ You are using a Swift library that wasn't correctly built for Swift concurrency 
 
 ## Capturing Non-Sendable Types
 
-You need to pass a type from this library to a `@Sendable` closure.
+You need to pass a type from this library to a `@Sendable` closure. Just remember, nothing will make this magically safe and you still should be confident you are not introducing data races.
 
 ```Swift
 import TheLibrary
@@ -20,7 +20,7 @@ func useTheType() {
 
 ## Solution #1: `@preconcurrency`
 
-This is an easy one. You can just import the library with ``@preconcurrency`. Just remember, this does not make this magically safe and you still should be confident you are not introducing data races.
+This is an easy one. You can just import the library with ``@preconcurrency`.
 
 ```Swift
 @preconcurrency import TheLibrary
