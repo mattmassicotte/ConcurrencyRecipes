@@ -22,6 +22,7 @@ Quick definitions for the hazards referenced throughout the recipes:
 - [Using Protocols](Recipes/Protocols.md)
 - [Sendability](Recipes/Sendability.md)
 - [Structured Concurrency](Recipes/Structured.md)
+- [Using Libraries not Designed for Concurrency](Recipes/PreconcurrencyLibraries.md)
 
 ## Contributing and Collaboration
 
