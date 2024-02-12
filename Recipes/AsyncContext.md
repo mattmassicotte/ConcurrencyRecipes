@@ -106,7 +106,7 @@ final class DemoViewController: UIViewController {
     func doWork() async {
         beforeWorkBegins()
         let result = await asyncExpensiveWork(arguments)
-        afterWorkIsDone(arguments)
+        afterWorkIsDone(result)
     }
 }
 ```
