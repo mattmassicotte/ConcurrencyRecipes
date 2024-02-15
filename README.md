@@ -3,6 +3,14 @@ Practical solutions to problems with Swift Concurrency
 
 Swift Concurrency can be really hard to use. I thought it could be handy to document and share solutions and hazards you might face along the way. I am **absolutely not** saying this is comprehensive, or that the solutions presented are great. I'm learning too. Contributions are very welcome, especially for problems!
 
+## Table of Contents
+
+- [Creating an Async Context](Recipes/AsyncContext.md)
+- [Using Protocols](Recipes/Protocols.md)
+- [Isolation](Recipes/Isolation.md)
+- [Structured Concurrency](Recipes/Structured.md)
+- [Using Libraries not Designed for Concurrency](Recipes/PreconcurrencyLibraries.md)
+
 ## Hazards
 
 Quick definitions for the hazards referenced throughout the recipes:
@@ -15,14 +23,6 @@ Quick definitions for the hazards referenced throughout the recipes:
 - Availability: Concurrency is evolving rapidly, and some APIs require the latest SDK.
 - Async virality: Making a function async affects all its callsites. This can result in a large number of changes, each of which could, itself, affect subsequence callsites.
 - Actor Reentrancy: More than one thread can enter an Actor's async methods. An actor's state can change across awaits.
-
-## Table of Contents
-
-- [Creating an Async Context](Recipes/AsyncContext.md)
-- [Using Protocols](Recipes/Protocols.md)
-- [Sendability](Recipes/Sendability.md)
-- [Structured Concurrency](Recipes/Structured.md)
-- [Using Libraries not Designed for Concurrency](Recipes/PreconcurrencyLibraries.md)
 
 ## Contributing and Collaboration
 
