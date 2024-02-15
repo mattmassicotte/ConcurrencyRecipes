@@ -4,7 +4,7 @@ Passing data around across isolation domains means you need the types to conform
 
 ## Non-Sendable Arguments
 
-You need to pass some non-Sendable arguments into a function in a different isolution domain.
+You need to pass some non-Sendable arguments into a function in a different isolation domain.
 
 ```swift
 func myAsyncFunction(_ nonSendable: NonSendable) async {
