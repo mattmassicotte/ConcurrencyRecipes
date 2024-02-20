@@ -42,7 +42,7 @@ final class DemoViewController: UIViewController {
         // We assume we're on the main thread here
         beforeWorkBegins()
 
-        DispatchQueue.global.async {
+        DispatchQueue.global().async {
             let possibleResult = expensiveWork(arguments)
             
             DispatchQueue.main.async {
@@ -82,7 +82,7 @@ final class DemoViewController: UIViewController {
         // While this recipe guarantees that `beforeWorkBegins()` happens before
         // `asyncExpensiveWork()`, if there are any **other** Tasks that are
         // created by the caller, there is no ordering guarantees among the tasks.
-        // This differs from the DispatchQueue.global.async() world, where blocks
+        // This differs from the DispatchQueue.global().async world, where blocks
         // are started in the order in which they are submitted to the queue.
         Task {
             // MainActor-ness has been inherited from the creating context.
@@ -131,14 +131,14 @@ func asyncExpensiveWork(arguments: Arguments) async -> Result {
 }
 ```
 
-Yes, this just sneaks `DispatchQueue.global.async()` into the Swift Concurrency world. However, this seems appropriate: You won't tie up one of the threads in the cooperative thread pool to execute `expensiveWork()`. Another advantage of this approach: It's now baked into the implementation of `asyncExpensiveWork()` that the expensive stuff happens on a background thread. You can't accidentally run the code in the main actor context.
+Yes, this just sneaks `DispatchQueue.global.async` into the Swift Concurrency world. However, this seems appropriate: You won't tie up one of the threads in the cooperative thread pool to execute `expensiveWork()`. Another advantage of this approach: It's now baked into the implementation of `asyncExpensiveWork()` that the expensive stuff happens on a background thread. You can't accidentally run the code in the main actor context.
 
 **Sidenote** To Swift, `func foo()` and `func foo() async` are different and the compiler knows which one to use depending on if the callsite is a synchronous or asynchronous context. This means your async wrappers can have the same naming as their synchronous counterparts:
 
 ```swift
 func expensiveWork(arguments: Arguments) async -> Result {
     await withCheckedContinuation { continuation in
-        DispatchQueue.global.async {
+        DispatchQueue.global().async {
             let result = expensiveWork(arguments)
             continuation.resume(returning: result)
         }
