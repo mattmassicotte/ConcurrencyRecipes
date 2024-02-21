@@ -46,3 +46,10 @@ public final class SendableClass: Sendable {
 	public init() {
 	}
 }
+
+public protocol NonIsolatedProtocol {
+	func nonSendableCallback(callback: @escaping () -> Void)
+
+//	@preconcurrency
+	func annotatedNonSendableCallback(callback: @escaping @Sendable () -> Void)
+}

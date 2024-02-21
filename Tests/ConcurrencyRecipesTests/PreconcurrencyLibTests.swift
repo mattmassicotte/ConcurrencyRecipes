@@ -66,15 +66,26 @@ extension PreconcurrencyLibTests {
 	nonisolated(unsafe) static let unsafeNonSendableConstant = NonSendableClass()
 }
 
-class YourClass {
-	static let nonSendableConstant = NonSendableClass()
-}
+@MainActor
+final class AdoptNonIsolatedProtocol: NonIsolatedProtocol {
+	func work() async {
 
-func useTheType(isolatedTo actor: any Actor) {
-	let value = NonSendableClass()
+	}
 
-	Task {
-		_ = actor
-		value.accessMutableState()
+	nonisolated func nonSendableCallback(callback: @escaping @Sendable () -> Void) {
+		Task {
+			await self.work()
+			callback()
+		}
+	}
+
+	nonisolated func annotatedNonSendableCallback(callback: @escaping @Sendable () -> Void) {
+		Task {
+			await self.work()
+
+			await MainActor.run {
+				callback()
+			}
+		}
 	}
 }

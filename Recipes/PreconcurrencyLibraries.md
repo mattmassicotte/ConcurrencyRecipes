@@ -90,3 +90,60 @@ class YourClass {
     nonisolated(unsafe) static let value = TypeFromTheLibrary()
 }
 ```
+
+## Protocol Function with Callback
+
+You have a protocol that uses callbacks. These callbacks are not correctly marked with global actors or `@Sendable`.
+
+```Swift
+import TheLibrary
+
+class YourClass: LibraryProtocol {
+    func protocolFunction(callback: @escaping () -> Void)
+        Task {
+            // doing your async work here
+
+            // WARNING: Capture of 'callback' with non-sendable type '() -> Void' in a `@Sendable` closure
+            callback()
+        }
+}
+```
+
+## Solution #1: `@preconcurrency` + `@Sendable`
+
+If you import the library with `@preconcurrency`, you can adjust your conformance to match the `@Sendable` reality of the function.
+
+```Swift
+@preconcurrency import TheLibrary
+
+class YourClass: LibraryProtocol {
+    // the callback is documented to actually be ok to call on any thread, so it must be @Sendable. With preconcurrency, this Sendable mismatch is ok.
+    func protocolFunction(callback: @escaping @Sendable () -> Void)
+        Task {
+            // doing your async work here
+
+            callback()
+        }
+}
+```
+
+## Solution #2: `@preconcurrency` + `@Sendable` + `MainActor.run`
+
+Almost the same as #1, but the callback must be run on the main actor. In this case, it is not possible to add `@MainActor` to the conformance, and you have to instead make the isolation manual.
+
+```Swift
+@preconcurrency import TheLibrary
+
+class YourClass: LibraryProtocol {
+    // the callback is documented to actually be ok to call on any thread, so it must be @Sendable. With preconcurrency, this mismatch is still considered a match.
+    func protocolFunction(callback: @escaping @Sendable () -> Void)
+        Task {
+            // doing your async work here
+
+            // ensure you are back on the MainActor here
+            await MainActor.run {
+                callback()
+            }
+        }
+}
+```
