@@ -9,6 +9,7 @@ Swift Concurrency can be really hard to use. I thought it could be handy to docu
 - [Using Protocols](Recipes/Protocols.md)
 - [Isolation](Recipes/Isolation.md)
 - [Structured Concurrency](Recipes/Structured.md)
+- [SwiftUI](Recipes/SwiftUI.md)
 - [Using Libraries not Designed for Concurrency](Recipes/PreconcurrencyLibraries.md)
 
 ## Hazards
