@@ -168,7 +168,7 @@ actor MyUsage {
 
 ## Non-isolated NSObjectProtocol-inheriting Protocol
 
-This is similar to the above problem, but with the significant constraint that the type conforming to the protocol must inherit from NSObject. You can use all of the same solutions, with the exception of an actor type, which canot inherit from anything.
+This is similar to the above problem, but with the significant constraint that the type conforming to the protocol must inherit from `NSObject`. You can use all of the same solutions, with the exception of an actor type, which canot inherit from anything.
 
 ```swift
 actor MyActor {}
