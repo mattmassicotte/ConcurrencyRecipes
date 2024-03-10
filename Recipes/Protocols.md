@@ -174,7 +174,7 @@ This is similar to the above problem, but with the significant constraint that t
 actor MyActor {}
 
 // ERROR: ... 'MyActor' should inherit 'NSObject' instead ...
-extension: MyActor: URLSessionDelegate {
+extension MyActor: URLSessionDelegate {
 }
 ```
 
