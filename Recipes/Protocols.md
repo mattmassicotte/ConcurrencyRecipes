@@ -166,6 +166,54 @@ actor MyUsage {
 }
 ```
 
+## Non-isolated NSObjectProtocol-inheriting Protocol
+
+This is similar to the above problem, but with the significant constraint that the type conforming to the protocol must inherit from NSObject. You can use all of the same solutions, with the exception of an actor type, which canot inherit from anything.
+
+```swift
+actor MyActor {}
+
+// ERROR: ... 'MyActor' should inherit 'NSObject' instead ...
+extension: MyActor: URLSessionDelegate {
+}
+```
+
+## Solution #1: Functional Proxy
+
+This solution works for objects that strongly retain their delegates. `URLSession` does, but I'm sure there are many examples types that do not.
+
+```swift
+// first, make a simple type that conforms to the NSObjet-based protocol
+final class URLSessionDelegateProxy: NSObject {
+    var eventsFinished: () -> Void = { }
+}
+
+extension URLSessionDelegateProxy: URLSessionDelegate {
+    func urlSessionDidFinishEvents(forBackgroundURLSession session: URLSession) {
+        finishHandler()
+    }
+}
+
+// Use the proxy as a stand-in
+actor MyActor {
+    private let session: URLSession
+
+    init() {
+        let proxy = URLSessionDelegateProxy()
+
+        self.session = URLSession(configuration: .default, delegate: proxy, delegateQueue: nil)
+
+        // once self has been fully, initialized, assign the callbacks
+        proxy.eventsFinished = {
+            Task { await self.eventsFinished() }
+        }
+    }
+    
+    private func eventsFinished() {
+    }
+}
+```
+
 ## Non-isolated Init Requirement
 
 You need to satisfy an initializer requirement in a non-isolated protocol with an isolated type. This is a particularly tricky special-case of the problem above if you need to initialize instance variables.
