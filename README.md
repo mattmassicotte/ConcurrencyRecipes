@@ -11,6 +11,7 @@ Swift Concurrency can be really hard to use. I thought it could be handy to docu
 - [Structured Concurrency](Recipes/Structured.md)
 - [SwiftUI](Recipes/SwiftUI.md)
 - [Using Libraries not Designed for Concurrency](Recipes/PreconcurrencyLibraries.md)
+- [Interoperability](Recipes/Interoperability.md)
 
 ## Hazards
 
