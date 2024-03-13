@@ -147,3 +147,42 @@ class YourClass: LibraryProtocol {
         }
 }
 ```
+
+## Converting a completion callback to async
+
+You want to convert a function that uses a callback to async. This is particularly common when interoperating with Objective-C code, and the compiler will even generate async versions of certain patterns automically. But isolation and Sendability can still be a problem.
+
+```swift
+func doWork(argument: ArgValue, _ completionHandler: @escaping (ResultValue) -> Void)
+```
+
+## Solution #1: plain wrapper
+
+If the arguments (`ArgValue`) and return value (`ResultValue`) are `Sendable`, this is very straightforward. Remember, though, that just putting async on a function without any isolation makes it non-isolated. You must make sure that's compatible with how the function you are wrapping works.
+
+```swift
+func doWork() async -> ResultValue {
+    await withCheckedContinuation { continuation in
+        doWork { value in
+            continuation.resume(returning: value)
+        }
+    }
+}
+```
+
+## Solution #2: wrapper with non-Sendable return value
+
+A non-Sendable return value can potentially be a showstopper. But, if you do not need the entire object, or can transform it in some way before returning it, you can pull this off.
+
+```swift
+func doWork() async -> ResultValue {
+    await withCheckedContinuation { continuation in
+        doWork { nonSendableValue in
+            // within this block, it's safe to synchronously access the non-Sendable value
+            let sendableThing = nonSendableValue.partYouReallyNeed
+            
+            continuation.resume(returning: sendableThing)
+        }
+    }
+}
+```
