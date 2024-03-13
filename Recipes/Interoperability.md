@@ -1,6 +1,6 @@
 # Interoperability
 
-Using Swift concurrency with concurrency systems.
+Using Swift concurrency with other concurrency systems.
 
 ## DispatchQueue.async
 
