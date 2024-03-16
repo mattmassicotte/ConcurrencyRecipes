@@ -1,6 +1,6 @@
 import XCTest
-import PreconcurrencyLib
-//@preconcurrency import PreconcurrencyLib
+//import PreconcurrencyLib
+@preconcurrency import PreconcurrencyLib
 
 final class PreconcurrencyLibTests: XCTestCase {
 	func testAcceptEscapingBlock() {
@@ -54,6 +54,15 @@ final class PreconcurrencyLibTests: XCTestCase {
 		DispatchQueue.global().async {
 			ns.accessMutableState()
 		}
+	}
+
+	@MainActor
+	func testNonisolatedAsyncMethodOfNonSendableClass() async {
+		// created in MainActor domain
+		let ns = NonSendableClass()
+
+		// crosses to non-isolated here
+		await ns.asyncFunction()
 	}
 }
 

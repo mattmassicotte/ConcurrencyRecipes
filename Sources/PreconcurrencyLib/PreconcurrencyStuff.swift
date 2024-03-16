@@ -28,6 +28,10 @@ public class NonSendableClass {
 	public func accessMutableState() {
 		print("state:", mutableState)
 	}
+
+	public func asyncFunction() async {
+		
+	}
 }
 
 @preconcurrency
