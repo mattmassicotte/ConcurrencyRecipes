@@ -202,3 +202,45 @@ continuation.yield({
     try await work()
 })
 ```
+
+## Program Entry
+
+This one is less-common for app developers, but handy for CLI tools and other programs that need a programmer-defined entry point.
+
+### Solution #1: Top-Level Code
+
+Swift's top level code allows you to both throw *and* await.
+
+```swift
+// swift test.swift
+
+func doThing() async throws {
+    try await Task.sleep(nanoseconds: 1_000_000_000)
+}
+
+try await doThing()
+
+print("finished")
+```
+
+### Solution #2: @main
+
+Remember that Swift does not support using `@main` with a file that is inferred to have top-level code. It's confusing, but does make sense as this would result in an ambiguous start point.
+
+```swift
+// swift -parse-as-library test.swift
+// ./test
+
+func doThing() async throws {
+    try await Task.sleep(nanoseconds: 1_000_000_000)
+}
+
+@main
+struct ProgramEntry {
+    static func main() async throws {
+        try await doThing()
+
+        print("finished")
+    }
+}
+```
