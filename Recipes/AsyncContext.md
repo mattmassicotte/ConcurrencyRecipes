@@ -228,7 +228,7 @@ print("finished")
 Remember that Swift does not support using `@main` with a file that is inferred to have top-level code. It's confusing, but does make sense as this would result in an ambiguous start point.
 
 ```swift
-// swift -parse-as-library test.swift
+// swiftc -parse-as-library test.swift
 // ./test
 
 func doThing() async throws {
