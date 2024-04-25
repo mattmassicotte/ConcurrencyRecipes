@@ -91,50 +91,50 @@ What I've done here is mak a custom actor that isolates all accesses via a singl
 ```swift
 /// I *think* this is actually only using safe methods on `RunLoop`.
 final class ThreadExecutor: SerialExecutor, @unchecked Sendable {
-	let thread: Thread
-	let runloop: RunLoop
-
-	init(name: String) {
-		self.runloop = RunLoop()
-
-		self.thread = Thread(block: { [runloop] in
-			runloop.run()
-		})
-
-		thread.name = name
-	}
-
-	func enqueue(_ job: consuming ExecutorJob) {
-		let unownedJob = UnownedJob(job)
-		let unownedExecutor = asUnownedSerialExecutor()
-
-		runloop.perform {
-			unownedJob.runSynchronously(on: unownedExecutor)
-		}
-	}
+    let thread: Thread
+    let runloop: RunLoop
+    
+    init(name: String) {
+        self.runloop = RunLoop()
+        
+        self.thread = Thread(block: { [runloop] in
+            runloop.run()
+        })
+        
+        thread.name = name
+    }
+    
+    func enqueue(_ job: consuming ExecutorJob) {
+        let unownedJob = UnownedJob(job)
+        let unownedExecutor = asUnownedSerialExecutor()
+        
+        runloop.perform {
+            unownedJob.runSynchronously(on: unownedExecutor)
+        }
+    }
 }
 
 @globalActor
 public actor CustomGlobalActor {
-	public static let shared = CustomGlobalActor()
-
-	private nonisolated let executor: ThreadExecutor
-
-	init() {
-		self.executor = ThreadExecutor(name: String(describing: Self.self))
-	}
-
-	public nonisolated var unownedExecutor: UnownedSerialExecutor {
-		executor.asUnownedSerialExecutor()
-	}
-
-	/// This is really annoying, but it isn't possible to express a global actor assumeIsolated generically.
-	public static func assumeIsolated<T>(_ operation: @CustomGlobalActor () throws -> T, file: StaticString = #fileID, line: UInt = #line) rethrows -> T {
-		Self.shared.assertIsolated()
-		
-		return try withoutActuallyEscaping(operation) { fn in
-			try unsafeBitCast(fn, to: (() throws -> T).self)()
-		}
-	}
-}
+    public static let shared = CustomGlobalActor()
+    
+    private nonisolated let executor: ThreadExecutor
+    
+    init() {
+        self.executor = ThreadExecutor(name: String(describing: Self.self))
+    }
+    
+    public nonisolated var unownedExecutor: UnownedSerialExecutor {
+        executor.asUnownedSerialExecutor()
+    }
+    
+    /// This is really annoying, but it isn't possible to express a global actor assumeIsolated generically.
+    public static func assumeIsolated<T>(_ operation: @CustomGlobalActor () throws -> T, file: StaticString = #fileID, line: UInt = #line) rethrows -> T {
+        Self.shared.assertIsolated()
+        
+        return try withoutActuallyEscaping(operation) { fn in
+            try unsafeBitCast(fn, to: (() throws -> T).self)()
+        }
+    }
+    }
 ```
