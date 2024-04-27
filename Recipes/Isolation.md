@@ -86,58 +86,17 @@ There are situations where you need to manage a whole bunch of global state all 
 
 ## Making an Actor
 
-What I've done here is make a custom actor that isolates all accesses via a single thread with a runloop established. This is handy for interfacing with legacy runloop-only APIs. But fair warning: I have not tested this very much.
-
 ```swift
-// This is a custom executor that can be used to control how an actor actually executes work. We need that
-// to keep all execution on our thread.
-//
-// I *think* this is actually only using safe methods on `RunLoop`.
-final class ThreadExecutor: SerialExecutor, @unchecked Sendable {
-    let thread: Thread
-    let runloop: RunLoop
-    
-    init(name: String) {
-        self.runloop = RunLoop()
-        
-        self.thread = Thread(block: { [runloop] in
-            runloop.run()
-        })
-        
-        thread.name = name
-    }
-    
-    func enqueue(_ job: consuming ExecutorJob) {
-        let unownedJob = UnownedJob(job)
-        let unownedExecutor = asUnownedSerialExecutor()
-        
-        runloop.perform {
-            unownedJob.runSynchronously(on: unownedExecutor)
-        }
-    }
-}
-
-// And now actually define the actor. Most of this is boilerplate required to use a custom executor.
 @globalActor
 public actor CustomGlobalActor {
     public static let shared = CustomGlobalActor()
-    
-    private nonisolated let executor: ThreadExecutor
-    
-    init() {
-        self.executor = ThreadExecutor(name: String(describing: Self.self))
-    }
-    
-    public nonisolated var unownedExecutor: UnownedSerialExecutor {
-        executor.asUnownedSerialExecutor()
-    }
-    
+
     // I wanted to do something like MainActor.assumeIsolated, but it turns out every global actor has to implement that manually. This is because
     // it isn't possible to express a global actor assumeIsolated generically. So I just copied the sigature from MainActor.
     public static func assumeIsolated<T>(_ operation: @CustomGlobalActor () throws -> T, file: StaticString = #fileID, line: UInt = #line) rethrows -> T {
         // verify that we really are in the right isolation domain
         Self.shared.assertIsolated()
-        
+
         // use some tricky casting to remove the global actor so we can execute the clsoure
         return try withoutActuallyEscaping(operation) { fn in
             try unsafeBitCast(fn, to: (() throws -> T).self)()
