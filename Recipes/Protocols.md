@@ -322,7 +322,7 @@ protocol MyKey: EnvironmentKey {
 
 This solution took me a while to even fully understand. Adding MainActor establishes isolation, making the type Sendable. But, that also means the now `MainActor`-isolated init cannot be used at the definition site. Remember, `defaultValue` is non-isolated. If your type doesn't need to reference other `MainActor`-isolated types in its init, which is surprisingly common, this will work well.
 
-```
+```swift
 @MainActor
 class NonSendable {
     nonisolated init() {
