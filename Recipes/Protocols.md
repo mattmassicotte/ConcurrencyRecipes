@@ -295,3 +295,44 @@ class MyClass: MyProtocol {
     }
 }
 ```
+
+## Static Variables
+
+You want to conform to a protocol that requires a **non-isolated** static let property. This can be really tricky to handle. This comes up a lot with SwiftUI's `EnvironmentKey` and `PreferenceKey`.
+
+```swift
+// for reference, here's how EnvironmentKey is defined
+public protocol EnvironmentKey {
+    associatedtype Value
+
+    static var defaultValue: Self.Value { get }
+}
+
+class NonSendable {
+}
+
+protocol MyKey: EnvironmentKey {
+    // WARNING: Static property 'defaultValue' is not concurrency-safe because it is not
+    // either conforming to 'Sendable' or isolated to a global actor; this is an error in Swift 6
+    static var defaultValue = NonSendable()
+}
+```
+
+### Solution #1: MainActor + non-isolated init
+
+This solution took me a while to even fully understand. Adding MainActor establishes isolation, making the type Sendable. But, that also means the now `MainActor`-isolated init cannot be used at the definition site. Remember, `defaultValue` is non-isolated. If your type doesn't need to reference other `MainActor`-isolated types in its init, which is surprisingly common, this will work well.
+
+```
+@MainActor
+class NonSendable {
+    nonisolated init() {
+    }
+}
+
+protocol MyKey: EnvironmentKey {
+    // This is now ok because:
+    // a) our type is globally-isolated (and that means Sendable)
+    // b) the init can be called from a non-isolated context
+    static var defaultValue = NonSendable()
+}
+```

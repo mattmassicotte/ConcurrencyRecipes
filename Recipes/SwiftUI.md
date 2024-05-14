@@ -38,3 +38,7 @@ struct MyView: View {
     }
 }
 ```
+
+## EnvironmentKey/PreferencesKey
+
+These can be hard to use! Check out the [protocol section](Recipes/Protocols.md) for ideas.
