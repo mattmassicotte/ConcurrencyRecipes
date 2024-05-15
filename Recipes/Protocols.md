@@ -337,7 +337,23 @@ struct MyKey: EnvironmentKey {
 }
 ```
 
-### Solution #2: Define a read-only accessor
+### Solution #2: MainActor + non-isolated init + default values
+
+A non-isolated `init` can be hard to create when the type involves non-Sendable properties. Sometimes you can work around this by using default property values.
+
+```swift
+@MainActor
+class NonSendable {
+    // this is MainActor-only
+    private var value = AnotherNonSendable()
+
+    nonisolated init() {
+        // ok because self's isolated properties are not accessed
+    }
+}
+```
+
+### Solution #3: Define a read-only accessor
 
 Instead of trying to share a single non-Sendable value, create a new one on each access. This can work really well if the value is not accessed frequently and distinct instances make sense for your usage.
 
@@ -346,3 +362,4 @@ struct MyKey: EnvironmentKey {
     static var defaultValue: NonSendable { NonSendable() }
 }
 ```
+
