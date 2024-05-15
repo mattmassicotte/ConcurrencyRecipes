@@ -311,16 +311,16 @@ public protocol EnvironmentKey {
 class NonSendable {
 }
 
-protocol MyKey: EnvironmentKey {
+struct MyKey: EnvironmentKey {
     // WARNING: Static property 'defaultValue' is not concurrency-safe because it is not
     // either conforming to 'Sendable' or isolated to a global actor; this is an error in Swift 6
-    static var defaultValue = NonSendable()
+    static let defaultValue = NonSendable()
 }
 ```
 
 ### Solution #1: MainActor + non-isolated init
 
-This solution took me a while to even fully understand. Adding MainActor establishes isolation, making the type Sendable. But, that also means the now `MainActor`-isolated init cannot be used at the definition site. Remember, `defaultValue` is non-isolated. If your type doesn't need to reference other `MainActor`-isolated types in its init, which is surprisingly common, this will work well.
+This solution took me a while to even fully understand. Adding `MainActor` establishes isolation, making the type Sendable. But, that also means the now `MainActor`-isolated init cannot be used at the definition site. Remember, `defaultValue` is non-isolated. If your type doesn't need to reference other `MainActor`-isolated types in its init, which is surprisingly common, this will work well.
 
 ```swift
 @MainActor
@@ -329,10 +329,20 @@ class NonSendable {
     }
 }
 
-protocol MyKey: EnvironmentKey {
+struct MyKey: EnvironmentKey {
     // This is now ok because:
     // a) our type is globally-isolated (and that means Sendable)
     // b) the init can be called from a non-isolated context
-    static var defaultValue = NonSendable()
+    static let defaultValue = NonSendable()
+}
+```
+
+### Solution #2: Define a read-only accessor
+
+Instead of trying to share a single non-Sendable value, create a new one on each access. This can work really well if the value is not accessed frequently and distinct instances make sense for your usage.
+
+```swift
+struct MyKey: EnvironmentKey {
+    static var defaultValue: NonSendable { NonSendable() }
 }
 ```
