@@ -363,3 +363,12 @@ struct MyKey: EnvironmentKey {
 }
 ```
 
+### Solution #4: nonisolated(unsafe) Optional
+
+If you happen to be storing an optional value, you can safely cheat **if** you want to initialize the value to nil. But, you have to be careful here. It is very unusual for instances of a type to differ in thread-safety. This is just a very special case.
+
+```swift
+struct MyKey: EnvironmentKey {
+    nonisolated(unsafe) static let defaultValue: NonSendable? = nil
+}
+```
