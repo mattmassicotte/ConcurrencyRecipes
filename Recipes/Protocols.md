@@ -190,7 +190,7 @@ final class URLSessionDelegateProxy: NSObject {
 
 extension URLSessionDelegateProxy: URLSessionDelegate {
     func urlSessionDidFinishEvents(forBackgroundURLSession session: URLSession) {
-        finishHandler()
+        eventsFinished()
     }
 }
 
