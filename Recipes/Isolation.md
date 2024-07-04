@@ -104,3 +104,48 @@ public actor CustomGlobalActor {
     }
 }
 ```
+
+## Async Methods on Non-Sendable Types
+
+Non-`Sendable` types  **can** participate in concurrency. But, because `self` cannot cross isolation domains, it's easy to accidentally make the type unusable from an isolated context.
+
+```swift
+class NonSendableType {
+    func asyncFunction() async {
+    }
+}
+
+@MainActor
+class MyMainActorClass {
+    // this value is isolated to the MainActor
+    let value = NonSendableType()
+
+    func useType() async {
+        // here value is being transferred from the MainActor to a non-isolated
+        // context. That's not allowed.
+        // ERROR: Sending 'self.value' risks causing data races
+        await value.asyncFunction()
+    }
+}
+```
+
+### Solution #3: isolated parameter
+
+```swift
+class NonSendableType {
+    func asyncFunction(isolation: isolated (any Actor)? = #isolation) async {
+    }
+}
+
+@MainActor
+class MyMainActorClass {
+    // this value is isolated to the MainActor
+    let value = NonSendableType()
+
+    func useType() async {
+        // the compiler now knows that isolation does not change for
+        // this call, which makes it possible.
+        await value.asyncFunction()
+    }
+}
+```
