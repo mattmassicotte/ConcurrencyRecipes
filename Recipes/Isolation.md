@@ -129,7 +129,7 @@ class MyMainActorClass {
 }
 ```
 
-### Solution #3: isolated parameter
+### Solution #1: isolated parameter
 
 ```swift
 class NonSendableType {
