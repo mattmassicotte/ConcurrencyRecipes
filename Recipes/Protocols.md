@@ -214,6 +214,56 @@ actor MyActor {
 }
 ```
 
+## Solution #2: Event Sequence
+
+Solution #1 doesn't work any more for `URLSessionDelegate`, because it now requires a `Sendable` type. If you do not have to return values any values, this can work.
+
+```swift
+final class URLSessionDelegateAdapter: NSObject {
+    enum Event: Sendable {
+        case didFinishEvents
+    }
+
+    private let streamPair = AsyncStream<Event>.makeStream()
+
+    public var eventStream: AsyncStream<Event> {
+        streamPair.0
+    }
+}
+
+extension URLSessionDelegateAdapter: URLSessionDelegate {
+    func urlSessionDidFinishEvents(forBackgroundURLSession session: URLSession) {
+        streamPair.1.yield(.didFinishEvents)
+    }
+}
+
+// Use the proxy as a stand-in
+actor MyActor {
+    private let session: URLSession
+
+    init() {
+        let proxy = URLSessionDelegateProxy()
+
+        self.session = URLSession(configuration: .default, delegate: proxy, delegateQueue: nil)
+
+        // once self has been fully, initialized, consume the events
+        Task { [weak self] in
+        for await event in adapter.eventStream {
+            // don't forget to be careful with self's lifetime here
+            guard let self else { break }
+
+            switch event {
+            case .didFinishEvents:
+                await self.finishedEvents()
+            }
+        }
+    }
+    
+    private func eventsFinished() {
+    }
+}
+```
+
 ## Non-isolated Init Requirement
 
 You need to satisfy an initializer requirement in a non-isolated protocol with an isolated type. This is a particularly tricky special-case of the problem above if you need to initialize instance variables.
