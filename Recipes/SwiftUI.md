@@ -4,7 +4,7 @@ SwiftUI has a lot of built-in support for concurrency.
 
 ## Non-MainActor Isolation
 
-SwiftUI's [`View`](https://developer.apple.com/documentation/swiftui/view) type does not enforce whole-type isolation. Instead, just the `body` property is `MainActor`-isolated. This can make `View` subtypes very tricky to use. Races and incorrect isolation are common.
+Wait! As of the SDKs in Xcode 16, Swift's [`View`](https://developer.apple.com/documentation/swiftui/view) now is isolated to the `MainActor`!. However, just in case you want to have a look at what was required before, here are some ideas.
 
 ### Solution #1: Just use MainActor
 
