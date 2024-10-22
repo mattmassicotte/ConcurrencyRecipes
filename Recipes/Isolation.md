@@ -29,7 +29,7 @@ await myAsyncFunction({ NonSendable() })
 
 ## Variable Actor Isolation
 
-You need to isolation things differently depending on usage.
+You need to isolate things differently depending on usage.
 
 ```swift
 func takesClosure(_ block: () -> Void) {
