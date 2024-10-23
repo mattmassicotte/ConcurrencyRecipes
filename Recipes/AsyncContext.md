@@ -1,6 +1,6 @@
 # Async Contexts
 
-Virtually all programs needs to make at least one transition from a synchronous context to an asynchronous one.
+Virtually all programs need to make at least one transition from a synchronous context to an asynchronous one.
 
 ## Ad-Hoc
 
