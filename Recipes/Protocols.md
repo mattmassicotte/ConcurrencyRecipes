@@ -219,7 +219,7 @@ actor MyActor {
 Solution #1 doesn't work any more for `URLSessionDelegate`, because it now requires a `Sendable` type. If you do not have to return values any values, this can work.
 
 ```swift
-final class URLSessionDelegateAdapter: NSObject {
+final class URLSessionDelegateProxy: NSObject {
     enum Event: Sendable {
         case didFinishEvents
     }
@@ -231,7 +231,7 @@ final class URLSessionDelegateAdapter: NSObject {
     }
 }
 
-extension URLSessionDelegateAdapter: URLSessionDelegate {
+extension URLSessionDelegateProxy: URLSessionDelegate {
     func urlSessionDidFinishEvents(forBackgroundURLSession session: URLSession) {
         streamPair.1.yield(.didFinishEvents)
     }
@@ -248,7 +248,7 @@ actor MyActor {
 
         // once self has been fully, initialized, consume the events
         Task { [weak self] in
-        for await event in adapter.eventStream {
+        for await event in proxy.eventStream {
             // don't forget to be careful with self's lifetime here
             guard let self else { break }
 
