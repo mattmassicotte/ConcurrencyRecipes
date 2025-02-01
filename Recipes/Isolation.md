@@ -97,7 +97,7 @@ public actor CustomGlobalActor {
         // verify that we really are in the right isolation domain
         Self.shared.assertIsolated()
 
-        // use some tricky casting to remove the global actor so we can execute the clsoure
+        // use some tricky casting to remove the global actor so we can execute the closure
         return try withoutActuallyEscaping(operation) { fn in
             try unsafeBitCast(fn, to: (() throws -> T).self)()
         }
