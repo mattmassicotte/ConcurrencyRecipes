@@ -4,7 +4,7 @@ Practical solutions to problems with Swift Concurrency
 Swift Concurrency can be really hard to use. I thought it could be handy to document and share solutions and hazards you might face along the way. I am **absolutely not** saying this is comprehensive, or that the solutions presented are great. I'm learning too. Contributions are very welcome, especially for problems!
 
 > [!WARNING]
-> I have not updated the code in this repo for Swift 6.0. And on top of changes to the language, which were substantial, my general undestandings/opinions has changed as well. I'm still absolutely interested in your feedback/issue reports. But, please keep all this in mind when looking through the content.
+> I have not updated the code in this repo for Swift 6.0. And on top of changes to the language, which were substantial, my general understandings/opinions have changed as well. I'm still absolutely interested in your feedback/issue reports! But, please keep all this in mind when looking through the repo.
 
 ## Table of Contents
 
