@@ -243,18 +243,19 @@ actor MyActor {
 
     init() {
         let proxy = URLSessionDelegateProxy()
-
+        
         self.session = URLSession(configuration: .default, delegate: proxy, delegateQueue: nil)
-
+        
         // once self has been fully, initialized, consume the events
         Task { [weak self] in
-        for await event in proxy.eventStream {
-            // don't forget to be careful with self's lifetime here
-            guard let self else { break }
-
-            switch event {
-            case .didFinishEvents:
-                await self.finishedEvents()
+            for await event in proxy.eventStream {
+                // don't forget to be careful with self's lifetime here
+                guard let self else { break }
+                
+                switch event {
+                case .didFinishEvents:
+                    await self.eventsFinished()
+                }
             }
         }
     }
