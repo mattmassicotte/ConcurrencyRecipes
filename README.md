@@ -1,10 +1,13 @@
 # ConcurrencyRecipes
+
+> Originally authored by [Matt Massicotte](https://www.massicotte.org/). Maintained by [Dmitrii Kharlamov](https://dakharlamov.com) as of August 2026. Please consider [sponsoring the original author of this work - Matt Massicotte](https://github.com/sponsors/mattmassicotte).
+
 Practical solutions to problems with Swift Concurrency
 
-Swift Concurrency can be really hard to use. I thought it could be handy to document and share solutions and hazards you might face along the way. I am **absolutely not** saying this is comprehensive, or that the solutions presented are great. I'm learning too. Contributions are very welcome, especially for problems!
+Swift Concurrency can be really hard to use. I thought it could be handy to document and share solutions and hazards you might face along the way. I am **absolutely not** saying this is comprehensive, or that the solutions presented are great. I'm learning too. Contributions are very welcome, especially for problems! ~ Matt
 
 > [!WARNING]
-> I have not updated the code in this repo for Swift 6.0. And on top of changes to the language, which were substantial, my general understandings/opinions have changed as well. I'm still absolutely interested in your feedback/issue reports! But, please keep all this in mind when looking through the repo.
+> The code in this repo is not (yet) updated for Swift 6.0. On top of changes to the language, which were substantial, original author's (Matt) general understandings/opinions have changed as well. I'm absolutely interested in your feedback/issue reports! But, please keep all this in mind when looking through the repo.
 
 ## Table of Contents
 
@@ -31,7 +34,7 @@ Quick definitions for the hazards referenced throughout the recipes:
 
 ## Contributing and Collaboration
 
-I would love to hear from you! Issues or pull requests work great. You can also find me on [the web](https://www.massicotte.org).
+I would love to hear from you! Issues or pull requests work great. You can find Matt on [the web](https://www.massicotte.org) and Dmitrii at [dakharlamov.com](https://dakharlamov.com).
 
 I prefer collaboration, and would love to find ways to work together if you have a similar project.
 
