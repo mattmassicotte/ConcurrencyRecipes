@@ -1,6 +1,6 @@
 # ConcurrencyRecipes
 
-> Originally authored by [Matt Massicotte](https://www.massicotte.org/). Maintained by [Dmitrii Kharlamov](https://dakharlamov.com) as of August 2026. Please consider [sponsoring the original author of this work - Matt Massicotte](https://github.com/sponsors/mattmassicotte).
+> Originally created by @mattmassicotte. Now maintained by @dimasusername.
 
 Practical solutions to problems with Swift Concurrency
 
@@ -34,7 +34,7 @@ Quick definitions for the hazards referenced throughout the recipes:
 
 ## Contributing and Collaboration
 
-I would love to hear from you! Issues or pull requests work great. You can find Matt on [the web](https://www.massicotte.org) and Dmitrii at [dakharlamov.com](https://dakharlamov.com).
+I would love to hear from you! Issues or pull requests work great.
 
 I prefer collaboration, and would love to find ways to work together if you have a similar project.
 
